@@ -2,8 +2,12 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <utility>
+#include <tuple>
 
 namespace flags {
+
+using namespace std::string_literals;
 
 namespace detail {
 
@@ -26,11 +30,15 @@ struct flags {
     int argc;
     char** argv;
 
+    std::vector<std::tuple<std::string, bool, std::string>> flags_;
+
     bool passed(std::string flag) {
         return std::find(argv, argv + argc, flag) != (argv + argc);
     }
 
     std::string arg(std::string flag) {
+        flags_.emplace_back(flag, false, ""s);
+
         auto pos = std::find(argv, argv + argc, flag);
         if (pos == argv + argc || pos + 1 == argv + argc) {
             return "";
@@ -41,6 +49,8 @@ struct flags {
     }
 
     std::vector<std::string> args(std::string flag) {
+        flags_.emplace_back(flag, false, "");
+
         auto pos = std::find(argv, argv + argc, flag);
         std::vector<std::string> result;
         if (pos == argv + argc || pos + 1 == argv + argc) {
@@ -57,6 +67,8 @@ struct flags {
 
     template <typename T>
     T arg_as(std::string flag) {
+        flags_.emplace_back(flag, false, "");
+
         auto value = std::stringstream(arg(flag));
         T x = {};
         value >> x;
@@ -65,6 +77,8 @@ struct flags {
 
     template <typename T>
     std::vector<T> args_as(std::string flag) {
+        flags_.emplace_back(flag, false, "");
+
         auto parts = detail::split(arg(flag), ",");
         std::vector<T> xs;
         for (auto part : parts) {
@@ -79,6 +93,8 @@ struct flags {
 
     template <typename T>
     T arg_as_or(std::string flag, T alt) {
+        flags_.emplace_back(flag, true, std::to_string(alt));
+
         if (!passed(flag)) {
             return alt;
         }
@@ -89,6 +105,8 @@ struct flags {
     }
 
     std::string arg_or(std::string flag, std::string alt) {
+        flags_.emplace_back(flag, true, alt);
+
         if (!passed(flag)) {
             return alt;
         }
@@ -102,6 +120,31 @@ struct flags {
             }
         }
         return true;
+    }
+
+    bool sane() {
+        for (auto [flag, required, alt] : flags_) {
+            (void)alt;
+            if (required && !passed(flag)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    std::string usage() {
+        auto output = std::stringstream("");
+
+        output << "Usage: " << argv[0] << " [OPTIONS]...\n\n";
+
+        for (auto [flag, required, alt] : flags_) {
+            output << " " << flag;
+            if (required) {
+                output << " (" << alt << ")";
+            }
+            output << "\n";
+        }
+        return output.str();
     }
 };
 
