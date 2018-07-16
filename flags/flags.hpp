@@ -35,7 +35,7 @@ class flags {
     }
 
     std::string arg(std::string flag) {
-        flags_.emplace_back(flag, false, ""s);
+        flags_.emplace_back(flag, true, ""s);
 
         auto pos = std::find(argv_, argv_ + argc_, flag);
         if (pos == argv_ + argc_ || pos + 1 == argv_ + argc_) {
@@ -47,7 +47,7 @@ class flags {
     }
 
     std::vector<std::string> args(std::string flag) {
-        flags_.emplace_back(flag, false, "");
+        flags_.emplace_back(flag, true, "");
 
         auto pos = std::find(argv_, argv_ + argc_, flag);
         std::vector<std::string> result;
@@ -65,7 +65,7 @@ class flags {
 
     template <typename T>
     T arg_as(std::string flag) {
-        flags_.emplace_back(flag, false, "");
+        flags_.emplace_back(flag, true, "");
 
         auto value = std::stringstream(arg(flag));
         T x = {};
@@ -75,7 +75,7 @@ class flags {
 
     template <typename T>
     std::vector<T> args_as(std::string flag) {
-        flags_.emplace_back(flag, false, "");
+        flags_.emplace_back(flag, true, "");
 
         auto parts = detail::split(arg(flag), ",");
         std::vector<T> xs;
@@ -91,7 +91,7 @@ class flags {
 
     template <typename T>
     T arg_as_or(std::string flag, T alt) {
-        flags_.emplace_back(flag, true, std::to_string(alt));
+        flags_.emplace_back(flag, false, std::to_string(alt));
 
         if (!passed(flag)) {
             return alt;
@@ -103,7 +103,7 @@ class flags {
     }
 
     std::string arg_or(std::string flag, std::string alt) {
-        flags_.emplace_back(flag, true, alt);
+        flags_.emplace_back(flag, false, alt);
 
         if (!passed(flag)) {
             return alt;
