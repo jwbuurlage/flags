@@ -2,7 +2,7 @@
 
 ## 0.2.0
 
-Unreleased
+2018-07-16
 
 - Add `usage` output
 - Add `sane` check
