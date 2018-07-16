@@ -26,21 +26,19 @@ std::vector<std::string> split(std::string s, std::string delim) {
 
 } // namespace detail
 
-struct flags {
-    int argc;
-    char** argv;
-
-    std::vector<std::tuple<std::string, bool, std::string>> flags_;
+class flags {
+  public:
+    flags(int argc, char** argv) : argc_(argc), argv_(argv) {}
 
     bool passed(std::string flag) {
-        return std::find(argv, argv + argc, flag) != (argv + argc);
+        return std::find(argv_, argv_ + argc_, flag) != (argv_ + argc_);
     }
 
     std::string arg(std::string flag) {
         flags_.emplace_back(flag, false, ""s);
 
-        auto pos = std::find(argv, argv + argc, flag);
-        if (pos == argv + argc || pos + 1 == argv + argc) {
+        auto pos = std::find(argv_, argv_ + argc_, flag);
+        if (pos == argv_ + argc_ || pos + 1 == argv_ + argc_) {
             return "";
         }
         pos++;
@@ -51,13 +49,13 @@ struct flags {
     std::vector<std::string> args(std::string flag) {
         flags_.emplace_back(flag, false, "");
 
-        auto pos = std::find(argv, argv + argc, flag);
+        auto pos = std::find(argv_, argv_ + argc_, flag);
         std::vector<std::string> result;
-        if (pos == argv + argc || pos + 1 == argv + argc) {
+        if (pos == argv_ + argc_ || pos + 1 == argv_ + argc_) {
             return result;
         }
         pos++;
-        while (pos != argv + argc && *pos[0] != '-') {
+        while (pos != argv_ + argc_ && *pos[0] != '-') {
             result.push_back(std::string(*pos));
             pos++;
         }
@@ -135,7 +133,7 @@ struct flags {
     std::string usage() {
         auto output = std::stringstream("");
 
-        output << "Usage: " << argv[0] << " [OPTIONS]...\n\n";
+        output << "Usage: " << argv_[0] << " [OPTIONS]...\n\n";
 
         for (auto [flag, required, alt] : flags_) {
             output << " " << flag;
@@ -146,6 +144,13 @@ struct flags {
         }
         return output.str();
     }
+
+  private:
+    int argc_;
+    char** argv_;
+    std::vector<std::tuple<std::string, bool, std::string>> flags_;
+
+
 };
 
 } // namespace tomo
