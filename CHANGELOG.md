@@ -5,6 +5,7 @@
 Unreleased
 
 - Fix usage generation
+- Improve usage output
 
 ## 0.2.0
 

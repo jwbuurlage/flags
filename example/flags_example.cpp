@@ -4,6 +4,7 @@
 
 int main(int argc, char** argv) {
     auto options = flags::flags{argc, argv};
+    options.info("flags_example", "an example CLI program using flags");
 
     auto required_x = options.arg_as<int>("-x");
     auto y = options.arg_as_or<int>("-y", 520);

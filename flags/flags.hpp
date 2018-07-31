@@ -1,9 +1,9 @@
 #include <algorithm>
 #include <sstream>
 #include <string>
-#include <vector>
-#include <utility>
 #include <tuple>
+#include <utility>
+#include <vector>
 
 namespace flags {
 
@@ -24,24 +24,35 @@ std::vector<std::string> split(std::string s, std::string delim) {
     return result;
 }
 
+enum class flag_type {
+    optional,
+    required,
+    flag,
+};
+
 } // namespace detail
 
 class flags {
   public:
     flags(int argc, char** argv) : argc_(argc), argv_(argv) {}
 
+    void info(std::string program_name, std::string description) {
+        program_name_ = program_name;
+        description_ = description;
+    }
+
     bool passed(std::string flag) {
-        flags_.emplace_back(flag, true, ""s);
+        flags_.emplace_back(flag, detail::flag_type::flag, ""s);
         return passed_(flag);
     }
 
     std::string arg(std::string flag) {
-        flags_.emplace_back(flag, true, ""s);
+        flags_.emplace_back(flag, detail::flag_type::required, ""s);
         return arg_(flag);
     }
 
     std::vector<std::string> args(std::string flag) {
-        flags_.emplace_back(flag, true, "");
+        flags_.emplace_back(flag, detail::flag_type::optional, "[]");
 
         auto pos = std::find(argv_, argv_ + argc_, flag);
         std::vector<std::string> result;
@@ -59,7 +70,7 @@ class flags {
 
     template <typename T>
     T arg_as(std::string flag) {
-        flags_.emplace_back(flag, true, "");
+        flags_.emplace_back(flag, detail::flag_type::required, "");
 
         auto value = std::stringstream(arg_(flag));
         T x = {};
@@ -69,7 +80,7 @@ class flags {
 
     template <typename T>
     std::vector<T> args_as(std::string flag) {
-        flags_.emplace_back(flag, true, "");
+        flags_.emplace_back(flag, detail::flag_type::optional, "[]");
 
         auto parts = detail::split(arg_(flag), ",");
         std::vector<T> xs;
@@ -85,7 +96,8 @@ class flags {
 
     template <typename T>
     T arg_as_or(std::string flag, T alt) {
-        flags_.emplace_back(flag, false, std::to_string(alt));
+        flags_.emplace_back(flag, detail::flag_type::optional,
+                            std::to_string(alt));
 
         if (!passed_(flag)) {
             return alt;
@@ -97,7 +109,7 @@ class flags {
     }
 
     std::string arg_or(std::string flag, std::string alt) {
-        flags_.emplace_back(flag, false, alt);
+        flags_.emplace_back(flag, detail::flag_type::optional, alt);
 
         if (!passed_(flag)) {
             return alt;
@@ -115,9 +127,9 @@ class flags {
     }
 
     bool sane() {
-        for (auto [flag, required, alt] : flags_) {
+        for (auto [flag, type, alt] : flags_) {
             (void)alt;
-            if (required && !passed_(flag)) {
+            if (type == detail::flag_type::required && !passed_(flag)) {
                 return false;
             }
         }
@@ -125,15 +137,39 @@ class flags {
     }
 
     std::string usage() {
+        auto flag_size = [](auto& xs) { return std::get<0>(xs).size(); };
+
+        auto max_flag_size = flag_size(*std::max_element(
+            flags_.begin(), flags_.end(), [&](auto& lhs, auto& rhs) {
+                return flag_size(lhs) < flag_size(rhs);
+            }));
+
         auto output = std::stringstream("");
 
-        output << "Usage: " << argv_[0] << " [OPTIONS]...\n\n";
+        if (program_name_.empty()) {
+            program_name_ = argv_[0];
+        }
+        output << program_name_ << "\n";
+        if (!description_.empty()) {
+            output << description_ << "\n";
+        }
+        output << "\n";
 
-        for (auto [flag, required, alt] : flags_) {
-            output << " " << flag;
-            if (!required) {
-                output << " (" << alt << ")";
+        output << "USAGE: " << program_name_ << " [OPTIONS]\n\n";
+
+        output << "OPTIONS:\n";
+        for (auto [flag, type, alt] : flags_) {
+            output << "    " << flag;
+
+            auto padding = max_flag_size - flag.size();
+            output << std::string(padding, ' ');
+            if (type == detail::flag_type::optional) {
+                output << "    DEFAULT: " << alt;
             }
+            if (type == detail::flag_type::flag) {
+                output << "    FLAG";
+            }
+
             output << "\n";
         }
         return output.str();
@@ -155,7 +191,9 @@ class flags {
 
     int argc_;
     char** argv_;
-    std::vector<std::tuple<std::string, bool, std::string>> flags_;
+    std::vector<std::tuple<std::string, detail::flag_type, std::string>> flags_;
+    std::string program_name_;
+    std::string description_;
 };
 
-} // namespace tomo
+} // namespace flags
