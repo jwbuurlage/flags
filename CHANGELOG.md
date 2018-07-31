@@ -2,7 +2,7 @@
 
 ## 0.3.0
 
-Unreleased
+2018-07-31
 
 - Fix usage generation
 - Improve usage output
