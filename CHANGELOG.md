@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+Unreleased
+
+- Fix usage generation
+
 ## 0.2.0
 
 2018-07-16

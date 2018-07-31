@@ -31,19 +31,13 @@ class flags {
     flags(int argc, char** argv) : argc_(argc), argv_(argv) {}
 
     bool passed(std::string flag) {
-        return std::find(argv_, argv_ + argc_, flag) != (argv_ + argc_);
+        flags_.emplace_back(flag, true, ""s);
+        return passed_(flag);
     }
 
     std::string arg(std::string flag) {
         flags_.emplace_back(flag, true, ""s);
-
-        auto pos = std::find(argv_, argv_ + argc_, flag);
-        if (pos == argv_ + argc_ || pos + 1 == argv_ + argc_) {
-            return "";
-        }
-        pos++;
-
-        return std::string(*pos);
+        return arg_(flag);
     }
 
     std::vector<std::string> args(std::string flag) {
@@ -67,7 +61,7 @@ class flags {
     T arg_as(std::string flag) {
         flags_.emplace_back(flag, true, "");
 
-        auto value = std::stringstream(arg(flag));
+        auto value = std::stringstream(arg_(flag));
         T x = {};
         value >> x;
         return x;
@@ -77,7 +71,7 @@ class flags {
     std::vector<T> args_as(std::string flag) {
         flags_.emplace_back(flag, true, "");
 
-        auto parts = detail::split(arg(flag), ",");
+        auto parts = detail::split(arg_(flag), ",");
         std::vector<T> xs;
         for (auto part : parts) {
             auto value = std::stringstream(part);
@@ -93,10 +87,10 @@ class flags {
     T arg_as_or(std::string flag, T alt) {
         flags_.emplace_back(flag, false, std::to_string(alt));
 
-        if (!passed(flag)) {
+        if (!passed_(flag)) {
             return alt;
         }
-        auto value = std::stringstream(arg(flag));
+        auto value = std::stringstream(arg_(flag));
         T x = {};
         value >> x;
         return x;
@@ -105,15 +99,15 @@ class flags {
     std::string arg_or(std::string flag, std::string alt) {
         flags_.emplace_back(flag, false, alt);
 
-        if (!passed(flag)) {
+        if (!passed_(flag)) {
             return alt;
         }
-        return arg(flag);
+        return arg_(flag);
     }
 
     bool required_arguments(const std::vector<std::string>& args) {
         for (auto& arg : args) {
-            if (!passed(arg)) {
+            if (!passed_(arg)) {
                 return false;
             }
         }
@@ -123,7 +117,7 @@ class flags {
     bool sane() {
         for (auto [flag, required, alt] : flags_) {
             (void)alt;
-            if (required && !passed(flag)) {
+            if (required && !passed_(flag)) {
                 return false;
             }
         }
@@ -137,7 +131,7 @@ class flags {
 
         for (auto [flag, required, alt] : flags_) {
             output << " " << flag;
-            if (required) {
+            if (!required) {
                 output << " (" << alt << ")";
             }
             output << "\n";
@@ -146,11 +140,22 @@ class flags {
     }
 
   private:
+    bool passed_(std::string flag) {
+        return std::find(argv_, argv_ + argc_, flag) != (argv_ + argc_);
+    }
+
+    std::string arg_(std::string flag) {
+        auto pos = std::find(argv_, argv_ + argc_, flag);
+        if (pos == argv_ + argc_ || pos + 1 == argv_ + argc_) {
+            return "";
+        }
+        pos++;
+        return std::string(*pos);
+    }
+
     int argc_;
     char** argv_;
     std::vector<std::tuple<std::string, bool, std::string>> flags_;
-
-
 };
 
 } // namespace tomo
